@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using QuotesApi.Data;
 using QuotesApi.Models;
 using System;
@@ -22,48 +23,119 @@ namespace QuotesApi.Controllers
         }
         // GET: api/<QuotesController>
         [HttpGet]
-        public IEnumerable<Quote> Get()
+        public IActionResult Get(string sort)
         {
-            return _quotesDbContext.Quotes;
+            IQueryable<Quote> quotes;
+
+            switch (sort)
+            {
+                case "desc":
+                    quotes=_quotesDbContext.Quotes.OrderByDescending(q => q.CreatedAt);
+                    break;
+                case "asc":
+                    quotes = _quotesDbContext.Quotes.OrderBy(q => q.CreatedAt);
+                    break;
+                default:
+                    quotes = _quotesDbContext.Quotes;
+                    break;
+            }
+
+            //return _quotesDbContext.Quotes;
+            return Ok(quotes);
+            //return StatusCode(StatusCodes.Status200OK);
         }
 
         // GET api/<QuotesController>/5
         [HttpGet("{id}")]
-        public Quote Get(int id)
+        public IActionResult Get(int id)
         {
             var quote = _quotesDbContext.Quotes.Find(id);
+            if (quote == null)
+            {
+                return NotFound("No record found against this id...");
+            }
 
-            return quote;
+            return Ok(quote);
+        }
+
+        // GET: api/Quotes/Test/5
+        [HttpGet("[action]/{id}")]
+        public IActionResult Test(int id)
+        {
+            return Ok(id);
         }
 
         // POST api/<QuotesController>
         [HttpPost]
-        public void Post([FromBody] Quote quote)
+        public IActionResult Post([FromBody] Quote quote)
         {
             _quotesDbContext.Quotes.Add(quote);
             _quotesDbContext.SaveChanges();
+
+            return StatusCode(StatusCodes.Status201Created);
         }
 
         // PUT api/<QuotesController>/5
         [HttpPut("{id}")]
-        public void Put(int id, [FromBody] Quote quote)
+        public IActionResult Put(int id, [FromBody] Quote quote)
         {
             var entity = _quotesDbContext.Quotes.Find(id);
 
-            entity.Title = quote.Title;
-            entity.Author = quote.Author;
-            entity.Description = quote.Description;
+            if (entity == null)
+            {
+                return NotFound("No record found against this id...");
+            }
+            else
+            {
+                entity.Title = quote.Title;
+                entity.Author = quote.Author;
+                entity.Description = quote.Description;
+                entity.Type = quote.Type;
+                entity.CreatedAt = quote.CreatedAt;
 
-            _quotesDbContext.SaveChanges();
+                _quotesDbContext.SaveChanges();
+
+                return Ok("Record Updated Successfully...");
+            }
         }
 
         // DELETE api/<QuotesController>/5
         [HttpDelete("{id}")]
-        public void Delete(int id)
+        public IActionResult Delete(int id)
         {
             var quote = _quotesDbContext.Quotes.Find(id);
-            _quotesDbContext.Quotes.Remove(quote);
-            _quotesDbContext.SaveChanges();
+
+            if (quote == null)
+            {
+                return NotFound("No record found against this id...");
+            }
+            else
+            {
+                _quotesDbContext.Quotes.Remove(quote);
+                _quotesDbContext.SaveChanges();
+                return Ok("Record deleted...");
+            }                
+        }
+
+        [HttpGet("[action]")]
+        //[Route("[action]")]
+        public IActionResult PagingQuote(int? pageNumber, int? pageSize)
+        {
+            var quotes = _quotesDbContext.Quotes;
+            int currentPageNumber = pageNumber ?? 1;
+            int currentPageSize = pageSize ?? 5;
+
+            //Apply Skip and Take algo
+            return Ok(quotes.Skip((currentPageNumber - 1) * currentPageSize).Take(currentPageSize));
+        }
+
+        [HttpGet]
+        [Route("[action]")]
+        public IActionResult SearchQuote(string type)
+        {
+            var quotes = _quotesDbContext.Quotes.Where(q => q.Type.StartsWith(type));
+
+            return Ok(quotes);
         }
     }
 }

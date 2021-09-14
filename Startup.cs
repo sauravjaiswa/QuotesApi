@@ -30,13 +30,13 @@ namespace QuotesApi
             services.AddControllers();
             services.AddMvc(option=> {
                 option.EnableEndpointRouting = false;
-            });
+            }).AddXmlSerializerFormatters();
 
             services.AddDbContext<QuotesDbContext>(option => option.UseSqlServer(Configuration.GetConnectionString("QuotesDBConnection")));
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IWebHostEnvironment env, QuotesDbContext quotesDbContext)
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
         {
             if (env.IsDevelopment())
             {
@@ -48,7 +48,7 @@ namespace QuotesApi
             }
 
             app.UseHttpsRedirection();
-            quotesDbContext.Database.EnsureCreated();
+            //quotesDbContext.Database.Migrate();
             app.UseMvc(routes =>
             {
                 routes.MapRoute("default", "{controller=Home}/{action=Index}/{id?}");
