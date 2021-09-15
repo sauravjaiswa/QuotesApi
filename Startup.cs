@@ -12,6 +12,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 
 namespace QuotesApi
 {
@@ -32,7 +33,19 @@ namespace QuotesApi
                 option.EnableEndpointRouting = false;
             }).AddXmlSerializerFormatters();
 
+            services.AddAuthentication(options =>
+            {
+                options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+                options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+            }).AddJwtBearer(options =>
+            {
+                options.Authority = "https://quotesapidev.us.auth0.com/";
+                options.Audience = "https://localhost:44341/";
+            });
+
             services.AddDbContext<QuotesDbContext>(option => option.UseSqlServer(Configuration.GetConnectionString("QuotesDBConnection")));
+
+            services.AddResponseCaching();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -49,6 +62,11 @@ namespace QuotesApi
 
             app.UseHttpsRedirection();
             //quotesDbContext.Database.Migrate();
+            app.UseResponseCaching();
+
+            // 2. Enable authentication middleware
+            app.UseAuthentication();
+
             app.UseMvc(routes =>
             {
                 routes.MapRoute("default", "{controller=Home}/{action=Index}/{id?}");
