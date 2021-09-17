@@ -49,7 +49,7 @@ namespace QuotesApi
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
-        public void Configure(IApplicationBuilder app, IWebHostEnvironment env)
+        public void Configure(IApplicationBuilder app, IWebHostEnvironment env, QuotesDbContext quotesDbContext)
         {
             if (env.IsDevelopment())
             {
@@ -62,6 +62,7 @@ namespace QuotesApi
 
             app.UseHttpsRedirection();
             //quotesDbContext.Database.Migrate();
+            quotesDbContext.Database.EnsureCreated();
             app.UseResponseCaching();
 
             // 2. Enable authentication middleware
