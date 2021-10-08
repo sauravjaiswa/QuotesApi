@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using QuotesApi.Data;
 using QuotesApi.Models;
+using QuotesApi.Repository;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -18,156 +19,184 @@ namespace QuotesApi.Controllers
     [Authorize]
     public class QuotesController : ControllerBase
     {
-        private readonly QuotesDbContext _quotesDbContext;
+        private readonly IQuoteRepository _quoteRepository;
 
-        public QuotesController(QuotesDbContext quotesDbContext)
+        public QuotesController(IQuoteRepository quoteRepository)
         {
-            _quotesDbContext = quotesDbContext;
+            _quoteRepository = quoteRepository;
         }
         // GET: api/<QuotesController>
         [HttpGet]
         [ResponseCache(Duration = 60, Location = ResponseCacheLocation.Client)]
         [AllowAnonymous]
-        public IActionResult Get(string sort)
+        public async Task<IActionResult> Get(string sort)
         {
-            IQueryable<Quote> quotes;
-
-            switch (sort)
+            try
             {
-                case "desc":
-                    quotes=_quotesDbContext.Quotes.OrderByDescending(q => q.CreatedAt);
-                    break;
-                case "asc":
-                    quotes = _quotesDbContext.Quotes.OrderBy(q => q.CreatedAt);
-                    break;
-                default:
-                    quotes = _quotesDbContext.Quotes;
-                    break;
-            }
+                var quotes = await _quoteRepository.Get(sort);
 
-            //return _quotesDbContext.Quotes;
-            return Ok(quotes);
-            //return StatusCode(StatusCodes.Status200OK);
+                if (quotes == null)
+                {
+                    return NotFound("No quotes posted");
+                }
+
+                return Ok(quotes);
+            }
+            catch(Exception e)
+            {
+                return BadRequest();
+            }
         }
 
         // GET api/<QuotesController>/5
         [HttpGet("{id}")]
-        public IActionResult Get(int id)
+        public async Task<IActionResult> Get(int id)
         {
-            var quote = _quotesDbContext.Quotes.Find(id);
-            if (quote == null)
+            try
             {
-                return NotFound("No record found against this id...");
-            }
+                var quote = await _quoteRepository.Get(id);
 
-            return Ok(quote);
+                if (quote == null)
+                {
+                    return NotFound("No quote found");
+                }
+
+                return Ok(quote);
+            }
+            catch (Exception e)
+            {
+                return BadRequest();
+            }
         }
 
         // GET: api/Quotes/Test/5
-        [HttpGet("[action]/{id}")]
-        public IActionResult Test(int id)
-        {
-            return Ok(id);
-        }
+        //[HttpGet("[action]/{id}")]
+        //public IActionResult Test(int id)
+        //{
+        //    return Ok(id);
+        //}
 
         // POST api/<QuotesController>
         [HttpPost]
-        public IActionResult Post([FromBody] Quote quote)
+        public async Task<IActionResult> Post([FromBody] Quote quote)
         {
             string userId = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier).Value;
-            quote.UserId = userId;
-            _quotesDbContext.Quotes.Add(quote);
-            _quotesDbContext.SaveChanges();
+            if (userId == null)
+            {
+                return Unauthorized("You are not authorized to post");
+            }
 
-            return StatusCode(StatusCodes.Status201Created);
+            if (ModelState.IsValid)
+            {
+                try
+                {
+                    quote.UserId = userId;
+                    var postedQuote = await _quoteRepository.Post(quote);
+
+                    if (postedQuote == null)
+                    {
+                        return NotFound();
+                    }
+
+                    return StatusCode(StatusCodes.Status201Created, postedQuote);
+                }
+                catch (Exception e)
+                {
+                    return BadRequest();
+                }
+            }
+
+            return BadRequest();
         }
 
         // PUT api/<QuotesController>/5
         [HttpPut("{id}")]
-        public IActionResult Put(int id, [FromBody] Quote quote)
+        public async Task<IActionResult> Put(int id, [FromBody] Quote quote)
         {
             string userId = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier).Value;
-
-            var entity = _quotesDbContext.Quotes.Find(id);
-
-            if (entity == null)
+            if (userId == null)
             {
-                return NotFound("No record found against this id...");
+                return Unauthorized("You are not authorized to update");
             }
 
-            if (userId != entity.UserId)
+            if (ModelState.IsValid)
             {
-                return BadRequest("Sorry you cannot update this record");
-            }
-            else
-            {
-                entity.Title = quote.Title;
-                entity.Author = quote.Author;
-                entity.Description = quote.Description;
-                entity.Type = quote.Type;
-                entity.CreatedAt = quote.CreatedAt;
+                try
+                {
+                    var updatedQuote = await _quoteRepository.Put(userId, id, quote);
 
-                _quotesDbContext.SaveChanges();
+                    if (updatedQuote == null)
+                    {
+                        return NotFound();
+                    }
 
-                return Ok("Record Updated Successfully...");
+                    return Ok(updatedQuote);
+                }
+                catch (Exception e)
+                {
+                    return BadRequest();
+                }
             }
+
+            return BadRequest();
         }
 
         // DELETE api/<QuotesController>/5
         [HttpDelete("{id}")]
-        public IActionResult Delete(int id)
+        public async Task<IActionResult> Delete(int id)
         {
             string userId = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier).Value;
-
-            var quote = _quotesDbContext.Quotes.Find(id);
-
-            if (quote == null)
+            if (userId == null)
             {
-                return NotFound("No record found against this id...");
+                return Unauthorized("You are not authorized to delete");
             }
+            try
+            {
+                int result = await _quoteRepository.Delete(userId, id);
 
-            if (userId != quote.UserId)
-            {
-                return BadRequest("Sorry you cannot delete this record");
+                if (result == -1)
+                {
+                    return NotFound();
+                }
+
+                return Ok("Successfully deleted");
             }
-            else
+            catch (Exception e)
             {
-                _quotesDbContext.Quotes.Remove(quote);
-                _quotesDbContext.SaveChanges();
-                return Ok("Record deleted...");
-            }                
+                return BadRequest();
+            }
         }
 
-        [HttpGet("[action]")]
+        //[HttpGet("[action]")]
+        ////[Route("[action]")]
+        //public IActionResult PagingQuote(int? pageNumber, int? pageSize)
+        //{
+        //    var quotes = _quotesDbContext.Quotes;
+        //    int currentPageNumber = pageNumber ?? 1;
+        //    int currentPageSize = pageSize ?? 5;
+
+        //    //Apply Skip and Take algo
+        //    return Ok(quotes.Skip((currentPageNumber - 1) * currentPageSize).Take(currentPageSize));
+        //}
+
+        //[HttpGet]
         //[Route("[action]")]
-        public IActionResult PagingQuote(int? pageNumber, int? pageSize)
-        {
-            var quotes = _quotesDbContext.Quotes;
-            int currentPageNumber = pageNumber ?? 1;
-            int currentPageSize = pageSize ?? 5;
+        //public IActionResult SearchQuote(string type)
+        //{
+        //    var quotes = _quotesDbContext.Quotes.Where(q => q.Type.StartsWith(type));
 
-            //Apply Skip and Take algo
-            return Ok(quotes.Skip((currentPageNumber - 1) * currentPageSize).Take(currentPageSize));
-        }
+        //    return Ok(quotes);
+        //}
 
-        [HttpGet]
-        [Route("[action]")]
-        public IActionResult SearchQuote(string type)
-        {
-            var quotes = _quotesDbContext.Quotes.Where(q => q.Type.StartsWith(type));
+        //[HttpGet]
+        //[Route("[action]")]
+        //public IActionResult MyQuote()
+        //{
+        //    string userId = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier).Value;
 
-            return Ok(quotes);
-        }
+        //    var quotes = _quotesDbContext.Quotes.Where(q => q.UserId == userId);
 
-        [HttpGet]
-        [Route("[action]")]
-        public IActionResult MyQuote()
-        {
-            string userId = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier).Value;
-
-            var quotes = _quotesDbContext.Quotes.Where(q => q.UserId == userId);
-
-            return Ok(quotes);
-        }
+        //    return Ok(quotes);
+        //}
     }
 }

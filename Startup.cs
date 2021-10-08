@@ -13,6 +13,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using QuotesApi.Repository;
 
 namespace QuotesApi
 {
@@ -46,6 +47,8 @@ namespace QuotesApi
             services.AddDbContext<QuotesDbContext>(option => option.UseSqlServer(Configuration.GetConnectionString("QuotesDBConnection")));
 
             services.AddResponseCaching();
+
+            services.AddScoped<IQuoteRepository, SqlQuoteRepository>();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
