@@ -16,20 +16,20 @@ namespace QuotesApi.Repository
         {
             _quotesDbContext = quotesDbContext;
         }
-        public async Task<int> Delete(string userId, int id)
+        public async Task<int> Delete(string userId, int? id)
         {
             int result = -1;
             if (_quotesDbContext != null)
             {
                 var quote = await _quotesDbContext.Quotes.FindAsync(id);
 
-                if (userId != quote.UserId)
-                {
-                    throw new Exception();
-                }
-
                 if (quote != null)
                 {
+                    if (userId != quote.UserId)
+                    {
+                        throw new Exception();
+                    }
+
                     _quotesDbContext.Quotes.Remove(quote);
                     result = await _quotesDbContext.SaveChangesAsync();
                 }
@@ -59,7 +59,7 @@ namespace QuotesApi.Repository
                         quotes = await _quotesDbContext.Quotes.OrderBy(q => q.CreatedAt).ToListAsync();
                         break;
                     default:
-                        throw new Exception();
+                        //throw new Exception();
                         quotes = await _quotesDbContext.Quotes.ToListAsync();
                         break;
                 }
@@ -68,7 +68,7 @@ namespace QuotesApi.Repository
             return quotes;
         }
 
-        public async Task<Quote> Get(int id)
+        public async Task<Quote> Get(int? id)
         {
             if (_quotesDbContext != null)
             {
@@ -94,19 +94,19 @@ namespace QuotesApi.Repository
 
         }
 
-        public async Task<Quote> Put(string userId, int id, Quote quote)
+        public async Task<Quote> Put(string userId, int? id, Quote quote)
         {
             if (_quotesDbContext != null)
             {
                 var entity = await _quotesDbContext.Quotes.FindAsync(id);
 
-                if (userId != entity.UserId)
-                {
-                    throw new Exception();
-                }
-
                 if (entity != null)
                 {
+                    if (userId != entity.UserId)
+                    {
+                        throw new Exception();
+                    }
+
                     entity.Title = quote.Title;
                     entity.Author = quote.Author;
                     entity.Description = quote.Description;

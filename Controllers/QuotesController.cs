@@ -50,8 +50,13 @@ namespace QuotesApi.Controllers
 
         // GET api/<QuotesController>/5
         [HttpGet("{id}")]
-        public async Task<IActionResult> Get(int id)
+        public async Task<IActionResult> Get(int? id)
         {
+            if (id == null)
+            {
+                return BadRequest();
+            }
+
             try
             {
                 var quote = await _quoteRepository.Get(id);
@@ -80,6 +85,11 @@ namespace QuotesApi.Controllers
         [HttpPost]
         public async Task<IActionResult> Post([FromBody] Quote quote)
         {
+            if (User == null)
+            {
+                return Unauthorized("You are not authorized to post");
+            }
+
             string userId = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier).Value;
             if (userId == null)
             {
@@ -97,7 +107,7 @@ namespace QuotesApi.Controllers
                     {
                         return NotFound();
                     }
-
+                    
                     return StatusCode(StatusCodes.Status201Created, postedQuote);
                 }
                 catch (Exception e)
@@ -111,8 +121,18 @@ namespace QuotesApi.Controllers
 
         // PUT api/<QuotesController>/5
         [HttpPut("{id}")]
-        public async Task<IActionResult> Put(int id, [FromBody] Quote quote)
+        public async Task<IActionResult> Put(int? id, [FromBody] Quote quote)
         {
+            if (User == null)
+            {
+                return Unauthorized("You are not authorized to update");
+            }
+
+            if (id == null)
+            {
+                return BadRequest();
+            }
+
             string userId = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier).Value;
             if (userId == null)
             {
@@ -143,8 +163,18 @@ namespace QuotesApi.Controllers
 
         // DELETE api/<QuotesController>/5
         [HttpDelete("{id}")]
-        public async Task<IActionResult> Delete(int id)
+        public async Task<IActionResult> Delete(int? id)
         {
+            if (User == null)
+            {
+                return Unauthorized("You are not authorized to delete");
+            }
+
+            if (id == null)
+            {
+                return BadRequest();
+            }
+
             string userId = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier).Value;
             if (userId == null)
             {

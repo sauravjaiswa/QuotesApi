@@ -9,9 +9,9 @@ namespace QuotesApi.Repository
     public interface IQuoteRepository
     {
         Task<IEnumerable<Quote>> Get(string sort);
-        Task<Quote> Get(int id);
+        Task<Quote> Get(int? id);
         Task<Quote> Post(Quote quote);
-        Task<Quote> Put(string userId, int id, Quote quote);
-        Task<int> Delete(string userId, int id);
+        Task<Quote> Put(string userId, int? id, Quote quote);
+        Task<int> Delete(string userId, int? id);
     }
 }
