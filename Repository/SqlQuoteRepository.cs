@@ -39,9 +39,9 @@ namespace QuotesApi.Repository
             return result;
         }
 
-        public async Task<IEnumerable<Quote>> Get(string sort)
+        public async Task<IQueryable<Quote>> Get(string sort)
         {
-            IList<Quote> quotes = null;
+            IQueryable<Quote> quotes = null;
 
             if (_quotesDbContext != null)
             {
@@ -53,14 +53,14 @@ namespace QuotesApi.Repository
                 switch (sort)
                 {
                     case "desc":
-                        quotes = await _quotesDbContext.Quotes.OrderByDescending(q => q.CreatedAt).ToListAsync();
+                        quotes = _quotesDbContext.Quotes.OrderByDescending(q => q.CreatedAt);
                         break;
                     case "asc":
-                        quotes = await _quotesDbContext.Quotes.OrderBy(q => q.CreatedAt).ToListAsync();
+                        quotes = _quotesDbContext.Quotes.OrderBy(q => q.CreatedAt);
                         break;
                     default:
                         //throw new Exception();
-                        quotes = await _quotesDbContext.Quotes.ToListAsync();
+                        quotes = _quotesDbContext.Quotes;
                         break;
                 }
             }

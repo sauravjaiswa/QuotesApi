@@ -1,6 +1,7 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using QuotesApi.Data;
 using QuotesApi.Models;
 using QuotesApi.Repository;
@@ -33,7 +34,7 @@ namespace QuotesApi.Controllers
         {
             try
             {
-                var quotes = await _quoteRepository.Get(sort);
+                var quotes = await (await _quoteRepository.Get(sort)).ToListAsync();
 
                 if (quotes == null)
                 {
@@ -209,24 +210,64 @@ namespace QuotesApi.Controllers
         //    return Ok(quotes.Skip((currentPageNumber - 1) * currentPageSize).Take(currentPageSize));
         //}
 
-        //[HttpGet]
-        //[Route("[action]")]
-        //public IActionResult SearchQuote(string type)
-        //{
-        //    var quotes = _quotesDbContext.Quotes.Where(q => q.Type.StartsWith(type));
+        [HttpGet]
+        [Route("[action]")]
+        public async Task<IActionResult> SearchQuote(string type)
+        {
+            try
+            {
+                type = type.ToLower();
+                var quotes = await (await _quoteRepository.Get(sort: null))
+                    .Where(q => q.Type.ToLower()
+                    .StartsWith(type))
+                    .ToListAsync();
 
-        //    return Ok(quotes);
-        //}
+                if (quotes.Count() == 0)
+                {
+                    return NotFound("No quotes of the given type found");
+                }
 
-        //[HttpGet]
-        //[Route("[action]")]
-        //public IActionResult MyQuote()
-        //{
-        //    string userId = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier).Value;
+                return Ok(quotes);
+            }
+            catch (Exception e)
+            {
+                return BadRequest();
+            }
+        }
 
-        //    var quotes = _quotesDbContext.Quotes.Where(q => q.UserId == userId);
+        [HttpGet]
+        [Route("[action]")]
+        public async Task<IActionResult> MyQuote()
+        {
+            if (User == null)
+            {
+                return Unauthorized("Unauthorized user");
+            }
 
-        //    return Ok(quotes);
-        //}
+            string userId = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier).Value;
+
+            if (userId == null)
+            {
+                return Unauthorized("Unauthorized user");
+            }
+
+            try
+            {
+                var quotes = await (await _quoteRepository.Get(sort: null))
+                    .Where(q => q.UserId == userId)
+                    .ToListAsync();
+
+                if (quotes.Count() == 0)
+                {
+                    return NotFound();
+                }
+
+                return Ok(quotes);
+            }
+            catch (Exception)
+            {
+                return BadRequest();
+            }
+        }
     }
 }
