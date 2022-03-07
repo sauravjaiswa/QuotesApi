@@ -49,6 +49,16 @@ namespace QuotesApi
             services.AddResponseCaching();
 
             services.AddScoped<IQuoteRepository, SqlQuoteRepository>();
+
+            services.AddSwaggerGen(options =>
+            {
+                options.SwaggerDoc("v1", new Microsoft.OpenApi.Models.OpenApiInfo
+                {
+                    Title = "Quotes API",
+                    Version = "v1",
+                    Description = "Api for the Quotes Application",
+                });
+            });
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
@@ -75,6 +85,9 @@ namespace QuotesApi
             {
                 routes.MapRoute("default", "{controller=Home}/{action=Index}/{id?}");
             });
+
+            app.UseSwagger();
+            app.UseSwaggerUI(options => options.SwaggerEndpoint("/swagger/v1/swagger.json", "Quotes API"));
             //app.UseRouting();
 
             //app.UseAuthorization();
